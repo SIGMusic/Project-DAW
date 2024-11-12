@@ -43,7 +43,10 @@ def getBox(x, y):
         for boxY in range(HEIGHT):
             left = boxX * (BOXSIZE + GAPSIZE) + XMARGIN
             top = boxY * (BOXSIZE + GAPSIZE) + YMARGIN
-            boxRect = pygame.rect(left, top, BOXSIZE, BOXSIZE)
-            if boxRect.pygame.Rect.collidepoint(x, y):
+            boxRect = pygame.Rect(left, top, BOXSIZE, BOXSIZE)
+            if boxRect.collidepoint(x, y):
                 return (boxX, boxY)
     return (None, None)
+
+if __name__ == "__main__":
+    main()
