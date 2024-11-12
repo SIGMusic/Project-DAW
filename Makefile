@@ -6,4 +6,4 @@ install:
 update:
 	@echo "Updating dependencies..."
 	pipreqs . --force
-	@echo "Dependencies updated."
+	@echo "Dependencies updated.
