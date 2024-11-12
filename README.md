@@ -64,9 +64,9 @@ To streamline dependency installation, it's recommended to set up a virtual envi
      make update
      ```
 
-## TODO (17 Apr - 23 Apr)
+## TODO 
 ### Frontend
-- [ ] Maybe see if PyAutoGUI can help? (Evan)
+- [ ] get some buttons, sinusoid rendering going
 
 ### Backend
 - [ ] Generate and save sinusoid waves programmatically (high priority!!!).
@@ -74,5 +74,4 @@ To streamline dependency installation, it's recommended to set up a virtual envi
 - [ ] Custom filters + extensions!
 
 ### Other
-- [ ] Evan will discuss denoising (static, VAD) on April 23rd
 - [ ] MIDI later... 
