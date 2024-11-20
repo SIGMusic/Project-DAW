@@ -16,7 +16,6 @@ def main():
 
     DISPLAYSURF = pygame.display.set_mode((WIDTH, HEIGHT))
     daw = DAWInterface()
-    daw.add_track(daw.load_audio("exported_sound.wav")) # TODO: make configurable via UI
     daw.add_track(daw.load_audio("exported_sound.wav"))
 
     while True:
@@ -85,10 +84,10 @@ def draw_tracks(surface, daw):
             draw_waveform(surface, daw.tracks[i], top, daw.scroll_x)
 
 def draw_waveform(surface, audio_data, top, scroll_x):
+    # Make data mono and downsample for ease of display
     if len(audio_data.shape) > 1:
         audio_data = audio_data[:,0]
-    
-    audio_data = audio_data[::len(audio_data) // 3000 + 1]
+    audio_data = audio_data[::len(audio_data) // 1000 + 1]
 
     # Create a subsurface for the waveform area
     waveform_rect = pygame.Rect(TRACK_LABEL_WIDTH, top, WIDTH - TRACK_LABEL_WIDTH, TRACK_HEIGHT)
@@ -112,6 +111,7 @@ def draw_waveform(surface, audio_data, top, scroll_x):
             pygame.draw.line(waveform_surface, WHITE, (screen_x, y1), (screen_x + 1, y2), 1)
 
 def draw_file_upload(surface):
+    # Draw the file upload button
     y_pos = HEIGHT - FILE_UPLOAD_HEIGHT
     x_pos = WIDTH - 120
     font = pygame.font.Font(None, 24)

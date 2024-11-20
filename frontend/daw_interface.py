@@ -1,4 +1,5 @@
-# Description: This file contains the DAWInterface class, which is responsible for managing the DAW's state and handling user input.
+# Description: This file contains the DAWInterface class, which is responsible 
+# for managing the DAW's state, playback, and handling user input.
 import os
 import platform
 import math
@@ -22,18 +23,27 @@ class DAWInterface:
         self.dragging = False
         self.drag_start_x = 0
         self.drag_start_scroll = 0
-        self.is_playing = False
+        self.is_playing = False # If playback is occurring
         self.base_y = HEIGHT - (CONTROL_PANEL_HEIGHT // 2)
-        mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+        mixer.quit() # Ensure reset to default configuration
+        mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2, buffer=2048)
     
     def file_select(self):
         system = platform.system()
         file_path = ""
         root = Tk()
         root.withdraw()
-        if system == 'Windows' or system == 'Linux':
-            file_path = askopenfilename(title="Select a File", filetypes=[('Waveform Audio File', '*.wav'), ('Free Lossless Audio Codec', '*.flac'), ('Ogg', '*.ogg'), ('MPEG-1 Audio Layer III', '*.mp3'), ('MPEG-4 Audio', '*.m4a')])
-        elif system == 'Darwin':
+        if system == 'Windows' or system == 'Linux': # Windows Linux
+            file_path = askopenfilename(title="Select a File", 
+                filetypes=[
+                    ('Waveform Audio File', '*.wav'), 
+                    ('Free Lossless Audio Codec', '*.flac'), 
+                    ('Ogg', '*.ogg'), 
+                    ('MPEG-1 Audio Layer III', '*.mp3'), 
+                    ('MPEG-4 Audio', '*.m4a')
+                ]
+            )
+        elif system == 'Darwin': # MacOS
             file_path = askopenfilename(title="Select a File")
         else:
             raise OSError('Unsupported operating system: ' + system) 
@@ -42,42 +52,46 @@ class DAWInterface:
     def load_audio(self, file_path):
         try:
             audio_data = Wave(file_path).audio_data
+            
+            # If mono, duplicate to make stereo
             if len(audio_data.shape) == 1:
                 audio_data = np.stack((audio_data, audio_data), axis=1)
+                
+            # Check that the format matches rows -> samples, columns -> channels, swap if otherwise
             if audio_data.shape[0] < audio_data.shape[1]:
                 audio_data = np.ascontiguousarray(audio_data.T)
-            print (audio_data.shape)
+            print(audio_data)
             return audio_data
         except:
             return np.zeros(3000)
     
     def add_track(self, audio_data):
         self.tracks.append(audio_data)
-        self.sounds.append(mixer.Sound(sndarray.make_sound(audio_data)))
 
-    def combine_audio(self, s1, s2):
+    def combine_audio(self, s1, s2): # Helper method to layer audio tracks for playback
         size1 = s1.shape[0]
         size2 = s2.shape[0]
         if size1 > size2:
             s2 = np.pad(s2, [(0, size1 - size2), (0, 0)], mode='constant')
         if size1 < size2:
             s1 = np.pad(s1, [(0, size2 - size1), (0, 0)], mode='constant')
-        return (s1 + s2) / 2
+        return s1 + s2
     
     def play_audio(self):
         self.is_playing = True
-        print(self.load_audio("exported_sound.wav"))
         if self.tracks is not None:
             play = self.tracks[0]
             for i in range(1, len(self.tracks)):
-                play = self.combine_audio(play, self.tracks[i])
+                play = self.combine_audio(play, self.tracks[i]) # Layer audio tracks for simultaneous playback
             print(play)
-            mixer.Sound(play).play()
+            play = play.tobytes() # mixer.Sound() requires raw byte data
+            mixer.Sound(buffer=play).play()
 
     def stop_audio(self):
         self.is_playing = False
         mixer.stop()
 
+    # Helper to determine if a click occured within a circular button
     def is_inside_circle(self, point, center, radius):
         distance = math.sqrt((point[0] - center[0]) ** 2 + (point[1] - center[1]) ** 2)
         return distance <= radius
@@ -90,14 +104,14 @@ class DAWInterface:
                     self.drag_start_x = event.pos[0]
                     self.drag_start_scroll = self.scroll_x
                 if (self.is_inside_circle(event.pos, (60, self.base_y), 20)
-                    and not self.is_playing):
+                    and not self.is_playing): # Play audio if play button clicked and it's not already playing
                     self.play_audio()
                 if (self.is_inside_circle(event.pos, (120, self.base_y), 20)
-                    and self.is_playing):
+                    and self.is_playing): # Stop audio if stop button clicked and it's playing
                     self.stop_audio()
                 if (WIDTH - 120 < event.pos[0] < WIDTH 
                     and HEIGHT - FILE_UPLOAD_HEIGHT < event.pos[1] < HEIGHT
-                    and self.tracks.__len__() < 6):
+                    and self.tracks.__len__() < 6): # Launch file explorer if audio upload clicked and there is 6 or fewer tracks currently
                     self.add_track(self.load_audio(self.file_select()))
                 
 
