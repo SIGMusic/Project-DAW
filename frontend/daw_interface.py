@@ -1,6 +1,9 @@
 # Description: This file contains the DAWInterface class, which is responsible for managing the DAW's state and handling user input.
+import os
+import platform
 import math
 import pygame.mixer as mixer
+import pygame.sndarray as sndarray
 import numpy as np
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
 from .config import *
@@ -24,16 +27,25 @@ class DAWInterface:
         mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
     
     def file_select(self):
+        system = platform.system()
+        file_path = ""
         root = Tk()
         root.withdraw()
-        file_path = askopenfilename(title="Select a File", filetypes=[("All Files", "*.*")])
+        if system == 'Windows' or system == 'Linux':
+            file_path = askopenfilename(title="Select a File", filetypes=[('Waveform Audio File', '*.wav'), ('Free Lossless Audio Codec', '*.flac'), ('Ogg', '*.ogg'), ('MPEG-1 Audio Layer III', '*.mp3'), ('MPEG-4 Audio', '*.m4a')])
+        elif system == 'Darwin':
+            file_path = askopenfilename(title="Select a File")
+        else:
+            raise OSError('Unsupported operating system: ' + system) 
         return file_path
-    
-    def load_audio(self, filepath):
+        
+    def load_audio(self, file_path):
         try:
-            audio_data = Wave(filepath).audio_data
-            if (len(audio_data.shape) == 1):
+            audio_data = Wave(file_path).audio_data
+            if len(audio_data.shape) == 1:
                 audio_data = np.stack((audio_data, audio_data), axis=1)
+            if audio_data.shape[0] < audio_data.shape[1]:
+                audio_data = np.ascontiguousarray(audio_data.T)
             print (audio_data.shape)
             return audio_data
         except:
@@ -41,13 +53,26 @@ class DAWInterface:
     
     def add_track(self, audio_data):
         self.tracks.append(audio_data)
-        self.sounds.append(mixer.Sound(audio_data))
+        self.sounds.append(mixer.Sound(sndarray.make_sound(audio_data)))
 
+    def combine_audio(self, s1, s2):
+        size1 = s1.shape[0]
+        size2 = s2.shape[0]
+        if size1 > size2:
+            s2 = np.pad(s2, [(0, size1 - size2), (0, 0)], mode='constant')
+        if size1 < size2:
+            s1 = np.pad(s1, [(0, size2 - size1), (0, 0)], mode='constant')
+        return (s1 + s2) / 2
+    
     def play_audio(self):
         self.is_playing = True
-        if self.sounds is not None:
-            for sound in self.sounds:
-                sound.play()
+        print(self.load_audio("exported_sound.wav"))
+        if self.tracks is not None:
+            play = self.tracks[0]
+            for i in range(1, len(self.tracks)):
+                play = self.combine_audio(play, self.tracks[i])
+            print(play)
+            mixer.Sound(play).play()
 
     def stop_audio(self):
         self.is_playing = False
@@ -69,7 +94,6 @@ class DAWInterface:
                     self.play_audio()
                 if (self.is_inside_circle(event.pos, (120, self.base_y), 20)
                     and self.is_playing):
-                    self.is_playing = False
                     self.stop_audio()
                 if (WIDTH - 120 < event.pos[0] < WIDTH 
                     and HEIGHT - FILE_UPLOAD_HEIGHT < event.pos[1] < HEIGHT

@@ -88,7 +88,7 @@ def draw_waveform(surface, audio_data, top, scroll_x):
     if len(audio_data.shape) > 1:
         audio_data = audio_data[:,0]
     
-    # audio_data = audio_data[::len(audio_data) // 3000 + 1]
+    audio_data = audio_data[::len(audio_data) // 3000 + 1]
 
     # Create a subsurface for the waveform area
     waveform_rect = pygame.Rect(TRACK_LABEL_WIDTH, top, WIDTH - TRACK_LABEL_WIDTH, TRACK_HEIGHT)
