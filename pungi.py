@@ -47,7 +47,9 @@ def draw_timeline(surface, scroll_x, track_zoom, max_len_track):
     pygame.draw.rect(surface, (40, 40, 40), (TRACK_LABEL_WIDTH, 0, WIDTH - TRACK_LABEL_WIDTH, TIMELINE_HEIGHT))
     
     # Draw time markers
-    marker_spacing = track_zoom * 0.986 # Interpolation of audio samples means it will be slightly off, so we adjust here
+    # TODO Rounding means the timeline will be slightly off with the visual, 
+    # so we need to adjust either here or in the downsampling in draw_waveform()  
+    marker_spacing = track_zoom
     start_marker = scroll_x // marker_spacing
     for i in range(15):  # Draw visible markers
         x_pos = TRACK_LABEL_WIDTH + (i * marker_spacing) - (scroll_x % marker_spacing)
@@ -89,7 +91,6 @@ def draw_waveform(surface, audio_data, top, scroll_x, track_zoom):
     # Make data mono and downsample for ease of display
     if len(audio_data.shape) > 1:
         audio_data = audio_data[:,0]
-    
     samples_per_pixel = SAMPLE_RATE // track_zoom
     waveform = scipy.signal.decimate(audio_data, samples_per_pixel)
     
