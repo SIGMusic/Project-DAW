@@ -23,8 +23,10 @@ class DAWInterface:
         self.dragging = False
         self.drag_start_x = 0
         self.drag_start_scroll = 0
+        self.track_zoom = INITIAL_TRACK_ZOOM
         self.is_playing = False # If playback is occurring
         self.base_y = HEIGHT - (CONTROL_PANEL_HEIGHT // 2)
+        self.max_len_track = 0
         mixer.quit() # Ensure reset to default configuration
         mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2, buffer=2048)
     
@@ -60,7 +62,9 @@ class DAWInterface:
             # Check that the format matches rows -> samples, columns -> channels, swap if otherwise
             if audio_data.shape[0] < audio_data.shape[1]:
                 audio_data = np.ascontiguousarray(audio_data.T)
-            print(audio_data)
+                
+            if audio_data.shape[0] > self.max_len_track:
+                self.max_len_track = audio_data.shape[0]
             return audio_data
         except:
             return np.zeros(3000)
@@ -83,7 +87,6 @@ class DAWInterface:
             play = self.tracks[0]
             for i in range(1, len(self.tracks)):
                 play = self.combine_audio(play, self.tracks[i]) # Layer audio tracks for simultaneous playback
-            print(play)
             play = play.tobytes() # mixer.Sound() requires raw byte data
             mixer.Sound(buffer=play).play()
 

@@ -6,6 +6,8 @@ import pygame, sys
 import pygame.mixer as mixer
 from pygame.locals import *
 import numpy as np
+import scipy
+import scipy.signal
 from frontend.daw_interface import DAWInterface
 from frontend.config import *
 from backend.wave import Wave
@@ -16,7 +18,7 @@ def main():
 
     DISPLAYSURF = pygame.display.set_mode((WIDTH, HEIGHT))
     daw = DAWInterface()
-    daw.add_track(daw.load_audio("exported_sound.wav"))
+    daw.add_track(daw.load_audio("60.mp3"))
 
     while True:
         DISPLAYSURF.fill(BLACK)
@@ -31,7 +33,7 @@ def main():
         if mixer.get_num_channels() == 0:
             daw.is_playing = False  
              
-        draw_timeline(DISPLAYSURF, daw.scroll_x)
+        draw_timeline(DISPLAYSURF, daw.scroll_x, daw.track_zoom, daw.max_len_track)
         draw_tracks(DISPLAYSURF, daw)
         draw_filter_box(DISPLAYSURF)  
         draw_control_panel(DISPLAYSURF, daw)
@@ -40,12 +42,12 @@ def main():
         
         pygame.display.update()
 
-def draw_timeline(surface, scroll_x):
+def draw_timeline(surface, scroll_x, track_zoom, max_len_track):
     # Draw timeline background
     pygame.draw.rect(surface, (40, 40, 40), (TRACK_LABEL_WIDTH, 0, WIDTH - TRACK_LABEL_WIDTH, TIMELINE_HEIGHT))
     
     # Draw time markers
-    marker_spacing = 100
+    marker_spacing = track_zoom * 0.986 # Interpolation of audio samples means it will be slightly off, so we adjust here
     start_marker = scroll_x // marker_spacing
     for i in range(15):  # Draw visible markers
         x_pos = TRACK_LABEL_WIDTH + (i * marker_spacing) - (scroll_x % marker_spacing)
@@ -81,14 +83,16 @@ def draw_tracks(surface, daw):
         
         # Draw waveform if audio data exists
         if daw.tracks is not None and i < len(daw.tracks):
-            draw_waveform(surface, daw.tracks[i], top, daw.scroll_x)
+            draw_waveform(surface, daw.tracks[i], top, daw.scroll_x, daw.track_zoom)
 
-def draw_waveform(surface, audio_data, top, scroll_x):
+def draw_waveform(surface, audio_data, top, scroll_x, track_zoom):
     # Make data mono and downsample for ease of display
     if len(audio_data.shape) > 1:
         audio_data = audio_data[:,0]
-    audio_data = audio_data[::len(audio_data) // 1000 + 1]
-
+    
+    samples_per_pixel = SAMPLE_RATE // track_zoom
+    waveform = scipy.signal.decimate(audio_data, samples_per_pixel)
+    
     # Create a subsurface for the waveform area
     waveform_rect = pygame.Rect(TRACK_LABEL_WIDTH, top, WIDTH - TRACK_LABEL_WIDTH, TRACK_HEIGHT)
     try:
@@ -96,7 +100,7 @@ def draw_waveform(surface, audio_data, top, scroll_x):
     except ValueError:
         return
 
-    normalized_data = (audio_data / np.max(np.abs(audio_data))) * (TRACK_HEIGHT // 2)
+    normalized_data = (waveform / np.max(np.abs(waveform))) * (TRACK_HEIGHT // 2)
     center_line = TRACK_HEIGHT // 2
     
     # Only draw visible portion of waveform
