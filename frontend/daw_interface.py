@@ -7,6 +7,7 @@ import pygame.mixer as mixer
 import pygame.sndarray as sndarray
 import numpy as np
 from pygame.locals import MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION
+import scipy
 from .config import *
 from backend.wave import Wave
 from tkinter import Tk
@@ -27,8 +28,15 @@ class DAWInterface:
         self.is_playing = False # If playback is occurring
         self.base_y = HEIGHT - (CONTROL_PANEL_HEIGHT // 2)
         self.max_len_track = 0
+        self.decimate_ratio = 1
         mixer.quit() # Ensure reset to default configuration
         mixer.init(frequency=SAMPLE_RATE, size=-16, channels=2, buffer=2048)
+    
+    def set_decimate_ratio(self, track_zoom):
+        arbitrarily_long_array = np.zeros(1000000)
+        samples_per_pixel = SAMPLE_RATE // track_zoom
+        decimated_array = scipy.signal.decimate(arbitrarily_long_array, samples_per_pixel)
+        self.decimate_ratio = (len(decimated_array) / track_zoom) / (len(arbitrarily_long_array) / SAMPLE_RATE)
     
     def file_select(self):
         system = platform.system()

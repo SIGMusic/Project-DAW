@@ -18,8 +18,9 @@ def main():
 
     DISPLAYSURF = pygame.display.set_mode((WIDTH, HEIGHT))
     daw = DAWInterface()
-    daw.add_track(daw.load_audio("60.mp3"))
-
+    daw.add_track(daw.load_audio("60.wav"))
+    daw.set_decimate_ratio(INITIAL_TRACK_ZOOM)
+    decimate_ratio = daw.decimate_ratio
     while True:
         DISPLAYSURF.fill(BLACK)
         
@@ -33,7 +34,7 @@ def main():
         if mixer.get_num_channels() == 0:
             daw.is_playing = False  
              
-        draw_timeline(DISPLAYSURF, daw.scroll_x, daw.track_zoom, daw.max_len_track)
+        draw_timeline(DISPLAYSURF, daw.scroll_x, daw.track_zoom, decimate_ratio)
         draw_tracks(DISPLAYSURF, daw)
         draw_filter_box(DISPLAYSURF)  
         draw_control_panel(DISPLAYSURF, daw)
@@ -42,14 +43,14 @@ def main():
         
         pygame.display.update()
 
-def draw_timeline(surface, scroll_x, track_zoom, max_len_track):
+def draw_timeline(surface, scroll_x, track_zoom, decimate_ratio):
     # Draw timeline background
     pygame.draw.rect(surface, (40, 40, 40), (TRACK_LABEL_WIDTH, 0, WIDTH - TRACK_LABEL_WIDTH, TIMELINE_HEIGHT))
     
     # Draw time markers
     # TODO Rounding means the timeline will be slightly off with the visual, 
     # so we need to adjust either here or in the downsampling in draw_waveform()  
-    marker_spacing = track_zoom
+    marker_spacing = track_zoom * decimate_ratio
     start_marker = scroll_x // marker_spacing
     for i in range(15):  # Draw visible markers
         x_pos = TRACK_LABEL_WIDTH + (i * marker_spacing) - (scroll_x % marker_spacing)
@@ -101,7 +102,8 @@ def draw_waveform(surface, audio_data, top, scroll_x, track_zoom):
     except ValueError:
         return
 
-    normalized_data = (waveform / np.max(np.abs(waveform))) * (TRACK_HEIGHT // 2)
+    normalized_data = waveform
+    # normalized_data = (waveform / np.max(np.abs(waveform))) * (TRACK_HEIGHT // 2)
     center_line = TRACK_HEIGHT // 2
     
     # Only draw visible portion of waveform
